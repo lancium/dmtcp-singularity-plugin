@@ -1,0 +1,3 @@
+[submodule "dmtcp"]
+	path = dmtcp
+	url = git@github.com:png/dmtcp.git
