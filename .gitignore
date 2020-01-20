@@ -2,3 +2,4 @@
 *.xml
 ckpt*
 dmtcp_restart*
+*.py

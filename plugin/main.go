@@ -52,6 +52,11 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 			// register singularity checkpoint command
 			manager.RegisterCmd(checkpointCmd)
 			
+			//New scheme:
+			//singularity checkpoint [options for checkpointing] [instance] [command to run]
+			//this will translate roughly to singulairty exec [instance] /.dmtcp/bin/dmtcp_launch 
+			//[options] [command to run]
+			
 			// get reference to start Run method
 			instanceStartCmd := manager.GetCmd("instance_start")
 			if instanceStartCmd == nil {
@@ -60,11 +65,7 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 			}
 			instanceStartCmdRun := instanceStartCmd.Run
 			
-			
-			//New scheme:
-			//singularity checkpoint [options for checkpointing] [instance] [command to run]
-			//this will translate to singulairty exec [instance] /.dmtcp/bin/dmtcp_launch [options] [command to run]
-			// create command: singularity checkpoint exec
+			// create command: singularity checkpoint start
 			var checkpointStartCmd = &cobra.Command{
 				DisableFlagsInUseLine: true,
 				Args:                  cobra.MinimumNArgs(2),
@@ -75,6 +76,7 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 				Run: func(cmd *cobra.Command, args []string) {
 					isCheckpoint = true
 					//init checkpoint
+					//TODO: start a coordinator
 					instanceStartCmdRun(instanceStartCmd, args)
 				},
 				TraverseChildren: true,
@@ -82,6 +84,33 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 			// register checkpoint start command
 			manager.RegisterSubCmd(checkpointCmd, checkpointStartCmd)
 			checkpointStartCmd.Flags().AddFlagSet(instanceStartCmd.Flags())
+			
+			
+			// get reference to stop Run method
+			instanceStopCmd := manager.GetCmd("instance_stop")
+			if instanceStopCmd == nil {
+				sylog.Warningf("Could not find instance stop command")
+				return
+			}
+			instanceStopCmdRun := instanceStartCmd.Run
+
+			var checkpointStopCmd = &cobra.Command{
+				DisableFlagsInUseLine: true,
+				Args:                  cobra.MinimumNArgs(1),
+				Use:                   "stop [args ...]",
+				Short:                 "Checkpoint, stop an instance",
+				Long:                  "Stop an instance with checkpoint capabilities after checkpointing",
+				Example:               "singularity checkpoint stop <name>",
+				Run: func(cmd *cobra.Command, args []string) {
+					isCheckpoint = true
+					//TODO: send a checkpoint command
+					instanceStopCmdRun(instanceStopCmd, args)
+				},
+				TraverseChildren: true,
+			}
+			// register checkpoint start command
+			manager.RegisterSubCmd(checkpointCmd, checkpointStopCmd)
+			checkpointStopCmd.Flags().AddFlagSet(instanceStopCmd.Flags())
 			
 			
 			// get reference to exec Run method
@@ -126,11 +155,11 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 			// create command: singularity checkpoint run
 			var checkpointRunCmd = &cobra.Command{
 				DisableFlagsInUseLine: true,
-				Args:                  cobra.MinimumNArgs(1),
+				Args:                  cobra.MinimumNArgs(2),
 				Use:                   "run [args ...]",
 				Short:                 "Execute the runscript in the instance",
 				Long:                  "Execute the runscript in the given instance with checkpoint",
-				Example:               "singularity checkpoint run <command>",
+				Example:               "singularity checkpoint run <instance> <command>",
 				Run: func(cmd *cobra.Command, args []string) {
 					newArgs := []string{args[0],"sh", "/.dmtcp/scripts/launch.sh", "/singularity"}
 					fmt.Println(newArgs)
@@ -149,9 +178,9 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 				Use:                   "make [args ...]",
 				Short:                 "Checkpoint in the instance",
 				Long:                  "Checkpoint in the given instance",
-				Example:               "singularity checkpoint make <command>",
+				Example:               "singularity checkpoint make <instance>",
 				Run: func(cmd *cobra.Command, args []string) {
-					newArgs := []string{args[0],"sh", "/.dmtcp/scripts/checkpoint.sh"}
+					newArgs := []string{args[0],"sh", "/.dmtcp/scripts/checkpoint_then_kill.sh"}
 					fmt.Println(newArgs)
 					execCmdRun(execCmd, newArgs)
 				},
@@ -159,6 +188,24 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 			}
 			// register checkpoint make command
 			manager.RegisterSubCmd(checkpointCmd, checkpointMakeCmd)
+			
+			// create command: singularity checkpoint restart task
+			var checkpointRestartCmd = &cobra.Command{
+				DisableFlagsInUseLine: true,
+				Args:                  cobra.MinimumNArgs(1),
+				Use:                   "restart [args ...]",
+				Short:                 "Restart from script",
+				Long:                  "Restart from checkpoint script in mounted checkpoint file",
+				Example:               "singularity checkpoint restart <instance>",
+				Run: func(cmd *cobra.Command, args []string) {
+					newArgs := []string{args[0],"sh", "/.dmtcp/scripts/restart.sh"}
+					fmt.Println(newArgs)
+					execCmdRun(execCmd, newArgs)
+				},
+				TraverseChildren: true,
+			}
+			// register checkpoint make command
+			manager.RegisterSubCmd(checkpointCmd, checkpointRestartCmd)
 			
 			// Ask for the checkpoint, wait for finish.
 			// TODO: Add script for checkpointing first, then run here.
