@@ -33,6 +33,7 @@ var(
 type pluginImplementation struct{}
 
 func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
+	isCheckpoint := false 
 	r.AddCLIMutator(pluginapi.CLIMutator{
 		Mutate: func(manager *cmdline.CommandManager) {
 			// create command: singularity checkpoint
@@ -51,10 +52,36 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 			// register singularity checkpoint command
 			manager.RegisterCmd(checkpointCmd)
 			
+			// get reference to start Run method
+			instanceStartCmd := manager.GetCmd("instance_start")
+			if instanceStartCmd == nil {
+				sylog.Warningf("Could not find instance start command")
+				return
+			}
+			instanceStartCmdRun := instanceStartCmd.Run
+			
 			
 			//New scheme:
 			//singularity checkpoint [options for checkpointing] [instance] [command to run]
 			//this will translate to singulairty exec [instance] /.dmtcp/bin/dmtcp_launch [options] [command to run]
+			// create command: singularity checkpoint exec
+			var checkpointStartCmd = &cobra.Command{
+				DisableFlagsInUseLine: true,
+				Args:                  cobra.MinimumNArgs(2),
+				Use:                   "start [args ...]",
+				Short:                 "Start an instance",
+				Long:                  "Start an instance with checkpoint capabilities",
+				Example:               "singularity checkpoint start <container> <name>",
+				Run: func(cmd *cobra.Command, args []string) {
+					isCheckpoint = true
+					//init checkpoint
+					instanceStartCmdRun(instanceStartCmd, args)
+				},
+				TraverseChildren: true,
+			}
+			// register checkpoint start command
+			manager.RegisterSubCmd(checkpointCmd, checkpointStartCmd)
+			checkpointStartCmd.Flags().AddFlagSet(instanceStartCmd.Flags())
 			
 			
 			// get reference to exec Run method
@@ -74,6 +101,7 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 				Long:                  "Execute a program in the given instance with checkpoint",
 				Example:               "singularity checkpoint exec <name> <command>",
 				Run: func(cmd *cobra.Command, args []string) {
+					isCheckpoint = true
 					newArgs := []string{args[0],"sh", "/.dmtcp/scripts/launch.sh"}
 					newArgs = append(newArgs, args[1:]...)
 					fmt.Println(newArgs)
@@ -145,14 +173,16 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 				return
 			}
 			//Add bind for DMTCP if in environment.
-			dmtcpLocation := os.Getenv("SINGULARITY_DMTCP")
-			if(dmtcpLocation == ""){
-				sylog.Errorf("No DMTCP location found. Run install script?")
-				return 
+			if isCheckpoint{
+				dmtcpLocation := os.Getenv("SINGULARITY_DMTCP")
+				if(dmtcpLocation == ""){
+					sylog.Errorf("No DMTCP location found. Run install script?")
+					return 
+				}
+				origBind := c.GetBindPath()
+				c.SetBindPath(append(origBind, dmtcpLocation+":/.dmtcp/"))
+				//fmt.Println(c.GetBindPath())
 			}
-			origBind := c.GetBindPath()
-			c.SetBindPath(append(origBind, dmtcpLocation+":/.dmtcp/"))
-			//fmt.Println(c.GetBindPath())
 		},
 	})
 
