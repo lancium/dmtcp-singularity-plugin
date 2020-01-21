@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 	"github.com/sylabs/singularity/internal/pkg/sylog"
@@ -85,6 +86,14 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 			manager.RegisterSubCmd(checkpointCmd, checkpointStartCmd)
 			checkpointStartCmd.Flags().AddFlagSet(instanceStartCmd.Flags())
 			
+			// get reference to exec Run method
+			execCmd := manager.GetCmd("exec")
+			if execCmd == nil {
+				sylog.Warningf("Could not find exec command")
+				return
+			}
+			execCmdRun := execCmd.Run
+			
 			
 			// get reference to stop Run method
 			instanceStopCmd := manager.GetCmd("instance_stop")
@@ -92,7 +101,8 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 				sylog.Warningf("Could not find instance stop command")
 				return
 			}
-			instanceStopCmdRun := instanceStartCmd.Run
+			instanceStopCmdRun := instanceStopCmd.RunE
+			
 
 			var checkpointStopCmd = &cobra.Command{
 				DisableFlagsInUseLine: true,
@@ -104,22 +114,21 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 				Run: func(cmd *cobra.Command, args []string) {
 					isCheckpoint = true
 					//TODO: send a checkpoint command
+					//Checkpoint
+					newArgs := []string{"instance://"+args[0],"sh", "/.dmtcp/scripts/checkpoint_then_kill.sh"}
+					fmt.Println(newArgs)
+					ctkCmd := exec.Command("singularity", "exec", "instance://"+args[0], "sh", "/.dmtcp/scripts/checkpoint_then_kill.sh")
+					ctkCmd.Start()
+					ctkCmd.Wait()
+					fmt.Println("Shutting down instance...")
 					instanceStopCmdRun(instanceStopCmd, args)
 				},
 				TraverseChildren: true,
 			}
-			// register checkpoint start command
+			// register checkpoint stop command
 			manager.RegisterSubCmd(checkpointCmd, checkpointStopCmd)
 			checkpointStopCmd.Flags().AddFlagSet(instanceStopCmd.Flags())
 			
-			
-			// get reference to exec Run method
-			execCmd := manager.GetCmd("exec")
-			if execCmd == nil {
-				sylog.Warningf("Could not find exec command")
-				return
-			}
-			execCmdRun := execCmd.Run
 			
 			// create command: singularity checkpoint exec
 			var checkpointExecCmd = &cobra.Command{
@@ -140,17 +149,6 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 			}
 			// register checkpoint exec command
 			manager.RegisterSubCmd(checkpointCmd, checkpointExecCmd)
-			
-			
-			// get reference to run Run method -- not gonna be necessary, just using exec
-			/*
-			runCmd := manager.GetCmd("run")
-			if runCmd == nil {
-				sylog.Warningf("Could not find exec command")
-				return
-			}
-			runCmdRun := runCmd.Run
-			*/
 			
 			// create command: singularity checkpoint run
 			var checkpointRunCmd = &cobra.Command{
@@ -180,7 +178,7 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 				Long:                  "Checkpoint in the given instance",
 				Example:               "singularity checkpoint make <instance>",
 				Run: func(cmd *cobra.Command, args []string) {
-					newArgs := []string{args[0],"sh", "/.dmtcp/scripts/checkpoint_then_kill.sh"}
+					newArgs := []string{args[0],"sh", "/.dmtcp/scripts/checkpoint.sh"}
 					fmt.Println(newArgs)
 					execCmdRun(execCmd, newArgs)
 				},
