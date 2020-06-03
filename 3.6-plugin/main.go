@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"os"
 	"os/exec"
 
@@ -224,12 +223,20 @@ func callbackDMTCP(common *config.Common) {
 			return 
 		}
 		origBind := c.GetBindPath()
+		
+		//Build new mount path
 		var b singularity.BindPath
 		b.Source = dmtcpLocation
 		b.Destination = "/.dmtcp/"
 		
+		//Option for read only
+		var options = map[string]*singularity.BindOption{
+			"ro":        &singularity.BindOption{},
+		}
+		b.Options = options
+		
+		//Set to include this new bind path
 		c.SetBindPath(append(origBind, b))
-		fmt.Println(origBind, isCheckpoint, reflect.TypeOf(origBind))
 	}
 	return
 }
