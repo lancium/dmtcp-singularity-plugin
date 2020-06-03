@@ -1,2 +1,4 @@
 #!/bin/sh
-/.dmtcp/dmtcp/bin/dmtcp_launch --ckptdir /.dmtcp/checkpoint/ --ckpt-open-files $@
+echo "Launching DMTCP..."
+mkdir -p ./lancium-checkpoint/
+/.dmtcp/dmtcp/bin/dmtcp_launch --ckptdir ./lancium-checkpoint/ --ckpt-open-files $@

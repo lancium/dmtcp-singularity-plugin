@@ -1,3 +1,3 @@
 #!/bin/sh
-latest=$( ls -t1 /.dmtcp/checkpoint/ | grep .sh |  head -n 1 )
-"/.dmtcp/checkpoint/$latest"
+latest=$( ls -t1 ./lancium-checkpoint/ | grep .sh |  head -n 1 )
+"./lancium-checkpoint/$latest"
