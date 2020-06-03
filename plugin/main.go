@@ -20,7 +20,7 @@ var Plugin = pluginapi.Plugin{
 	Manifest: pluginapi.Manifest{
 		Name:        "lancium.com/dmtcp-singularity",
 		Author:      "Lancium",
-		Version:     "0.0.1",
+		Version:     "0.0.2",
 		Description: "This is a plugin to add checkpointing to Singularity with DMTCP",
 	},
 
@@ -225,7 +225,7 @@ func (p pluginImplementation) Initialize(r pluginapi.Registry) error {
 					return 
 				}
 				origBind := c.GetBindPath()
-				c.SetBindPath(append(origBind, dmtcpLocation+":/.dmtcp/"))
+				c.SetBindPath(append(origBind, dmtcpLocation+":/.dmtcp/:ro"))
 				//fmt.Println(c.GetBindPath())
 			}
 		},
