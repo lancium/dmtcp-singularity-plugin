@@ -3,3 +3,4 @@
 ckpt*
 dmtcp_restart*
 *.py
+plugin-build/
