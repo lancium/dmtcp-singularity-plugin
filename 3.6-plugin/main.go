@@ -164,8 +164,11 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 		Run: func(cmd *cobra.Command, args []string) {
 			isCheckpoint = true
 			checkpointStartCmd.Run(checkpointStartCmd, args[0:2])
-			args[1] = "instance://"+args[1]
-			checkpointExecCmd.Run(checkpointExecCmd, args[1:])
+			execSlice := make([]string, len(args))
+			copy(execSlice, args)
+			execSlice[1] = "instance://"+execSlice[1]
+			checkpointExecCmd.Run(checkpointExecCmd, execSlice[1:])
+			//checkpointStopCmd.Run(checkpointStopCmd, args[1:2])
 		},
 		TraverseChildren: true,
 	}
