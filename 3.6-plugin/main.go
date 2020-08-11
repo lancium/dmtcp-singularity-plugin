@@ -173,6 +173,8 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 			cmdSlice := append([]string{"checkpoint", "exec"}, execSlice[1:]...)
 			// actually exec
 			ctkCmd := exec.Command("singularity", cmdSlice[:]...)
+			ctkCmd.Stdout = os.Stdout
+			ctkCmd.Stderr = os.Stderr
 			ctkCmd.Start()
 			ctkCmd.Wait()
 			// stop instance
