@@ -174,7 +174,7 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 	}
 	// register checkpoint exec command
 	manager.RegisterSubCmd(checkpointCmd, checkpointJobStartCmd)
-	checkpointJobStartCmd.Flags().AddFlagSet(checkpointJobStartCmd.Flags())
+	checkpointJobStartCmd.Flags().AddFlagSet(instanceStartCmd.Flags())
 
 	// create command: singularity checkpoint run
 	var checkpointRunCmd = &cobra.Command{
