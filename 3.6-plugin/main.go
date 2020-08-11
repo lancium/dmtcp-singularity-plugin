@@ -160,24 +160,29 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 		Use:                   "job_run [args ...]",
 		Short:                 "Start an instance and execute a program",
 		Long:                  "Create an instance with DMTCP ready, then start a program with the DMTCP wrappers",
-		Example:               "singularity checkpoint job_start <container> <name> <command>",
+		Example:               "singularity checkpoint job_run <container> <name> <command>",
 		Run: func(cmd *cobra.Command, args []string) {
 			isCheckpoint = true
+			// run the start command with the container img and name
 			checkpointStartCmd.Run(checkpointStartCmd, args[0:2])
+			// format a slice by copying and modifying single element
 			execSlice := make([]string, len(args))
 			copy(execSlice, args)
 			execSlice[1] = "instance://"+execSlice[1]
+			// append singularity command on subset of modified slice to fit
 			cmdSlice := append([]string{"checkpoint", "exec"}, execSlice[1:]...)
-			fmt.Println(cmdSlice)
+			// actually exec
 			ctkCmd := exec.Command("singularity", cmdSlice[:]...)
 			ctkCmd.Start()
 			ctkCmd.Wait()
+			// stop instance
 			checkpointStopCmd.Run(checkpointStopCmd, args[1:2])
 		},
 		TraverseChildren: true,
 	}
-	// register checkpoint exec command
+	// register checkpoint job_run command
 	manager.RegisterSubCmd(checkpointCmd, checkpointJobRunCmd)
+	// must register instance start and exec's, hopefully not overlap/destroying
 	checkpointJobRunCmd.Flags().AddFlagSet(instanceStartCmd.Flags())
 	checkpointJobRunCmd.Flags().AddFlagSet(execCmd.Flags())
 
