@@ -154,10 +154,10 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 	// NEW!!!
 	// create command: singularity checkpoint job_start
 	// both starts an instance and runs a command
-	var checkpointJobStartCmd = &cobra.Command{
+	var checkpointJobRunCmd = &cobra.Command{
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.MinimumNArgs(3),
-		Use:                   "job_start [args ...]",
+		Use:                   "job_run [args ...]",
 		Short:                 "Start an instance and execute a program",
 		Long:                  "Create an instance with DMTCP ready, then start a program with the DMTCP wrappers",
 		Example:               "singularity checkpoint job_start <container> <name> <command>",
@@ -167,14 +167,19 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 			execSlice := make([]string, len(args))
 			copy(execSlice, args)
 			execSlice[1] = "instance://"+execSlice[1]
-			checkpointExecCmd.Run(checkpointExecCmd, execSlice[1:])
-			//checkpointStopCmd.Run(checkpointStopCmd, args[1:2])
+			cmdSlice := append([]string{"checkpoint", "exec"}, execSlice[1:]...)
+			fmt.Println(cmdSlice)
+			ctkCmd := exec.Command("singularity", cmdSlice[:]...)
+			ctkCmd.Start()
+			ctkCmd.Wait()
+			checkpointStopCmd.Run(checkpointStopCmd, args[1:2])
 		},
 		TraverseChildren: true,
 	}
 	// register checkpoint exec command
-	manager.RegisterSubCmd(checkpointCmd, checkpointJobStartCmd)
-	checkpointJobStartCmd.Flags().AddFlagSet(instanceStartCmd.Flags())
+	manager.RegisterSubCmd(checkpointCmd, checkpointJobRunCmd)
+	checkpointJobRunCmd.Flags().AddFlagSet(instanceStartCmd.Flags())
+	checkpointJobRunCmd.Flags().AddFlagSet(execCmd.Flags())
 
 	// create command: singularity checkpoint run
 	var checkpointRunCmd = &cobra.Command{
