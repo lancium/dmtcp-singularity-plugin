@@ -69,11 +69,11 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 	// create command: singularity checkpoint start
 	var checkpointStartCmd = &cobra.Command{
 		DisableFlagsInUseLine: true,
-		Args:                  cobra.MinimumNArgs(2),
+		Args:                  cobra.MinimumNArgs(3),
 		Use:                   "start [args ...]",
 		Short:                 "Start an instance",
 		Long:                  "Start an instance with checkpoint capabilities",
-		Example:               "singularity checkpoint start <container> <name>",
+		Example:               "singularity checkpoint start <container> <name> <checkpoint directory>",
 		Run: func(cmd *cobra.Command, args []string) {
 			isCheckpoint = true
 			//init checkpoint
@@ -263,18 +263,28 @@ func callbackDMTCP(common *config.Common) {
 		origBind := c.GetBindPath()
 		
 		//Build new mount path
-		var b singularity.BindPath
-		b.Source = dmtcpLocation
-		b.Destination = "/.dmtcp/"
+		var dmtcpBind singularity.BindPath
+		dmtcpBind.Source = dmtcpLocation
+		dmtcpBind.Destination = "/.dmtcp/"
+
+		var ckptBind singularity.BindPath
+		ckptBind.Source = "./"
+		ckptBind.Destination = "/.checkpoint/"
 		
 		//Option for read only
-		var options = map[string]*singularity.BindOption{
+		var dmtcpOptions = map[string]*singularity.BindOption{
 			"ro":        &singularity.BindOption{},
 		}
-		b.Options = options
+
+		//Option for read/write
+		var ckptOptions = map[string]*singularity.BindOption{
+			"rw":        &singularity.BindOption{},
+		}
+		dmtcpBind.Options = dmtcpOptions
+		ckptBind.Options = ckptOptions
 		
 		//Set to include this new bind path
-		c.SetBindPath(append(origBind, b))
+		c.SetBindPath(append(origBind, dmtcpBind, ckptBind))
 	}
 	return
 }
