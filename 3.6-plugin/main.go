@@ -255,9 +255,18 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 			isCheckpoint = true
 			// run the start command with the container img and name
 			checkpointStartCmd.Run(checkpointStartCmd, args[0:2])
-			newArgs := []string{args[0],"sh", "/.dmtcp/scripts/restart.sh"}
-			fmt.Println(newArgs)
-			execCmdRun(execCmd, newArgs)
+			// format a slice by copying and modifying single element
+			execSlice := make([]string, len(args))
+			copy(execSlice, args)
+			execSlice[1] = "instance://"+execSlice[1]
+			// append singularity command on subset of modified slice to fit
+			cmdSlice := append([]string{"checkpoint", "restart"}, execSlice[1])
+			// actually exec
+			ctkCmd := exec.Command("singularity", cmdSlice[:]...)
+			ctkCmd.Stdout = os.Stdout
+			ctkCmd.Stderr = os.Stderr
+			ctkCmd.Start()
+			ctkCmd.Wait()
 			// stop instance
 			checkpointStopCmd.Run(checkpointStopCmd, args[1:2])
 		},
