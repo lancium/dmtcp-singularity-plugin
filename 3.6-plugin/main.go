@@ -73,7 +73,7 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 		Use:                   "start [args ...]",
 		Short:                 "Start an instance",
 		Long:                  "Start an instance with checkpoint capabilities",
-		Example:               "singularity checkpoint start <container> <name> <checkpoint directory>",
+		Example:               "singularity checkpoint start <image> <name> <checkpoint directory>",
 		Run: func(cmd *cobra.Command, args []string) {
 			isCheckpoint = true
 			//init checkpoint
@@ -151,8 +151,7 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 	manager.RegisterSubCmd(checkpointCmd, checkpointExecCmd)
 	checkpointExecCmd.Flags().AddFlagSet(execCmd.Flags())
 
-	// NEW!!!
-	// create command: singularity checkpoint job_start
+	// create command: singularity checkpoint job_run
 	// both starts an instance and runs a command
 	var checkpointJobRunCmd = &cobra.Command{
 		DisableFlagsInUseLine: true,
@@ -160,7 +159,7 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 		Use:                   "job_run [args ...]",
 		Short:                 "Start an instance and execute a program",
 		Long:                  "Create an instance with DMTCP ready, then start a program with the DMTCP wrappers",
-		Example:               "singularity checkpoint job_run <container> <name> <command>",
+		Example:               "singularity checkpoint job_run <image> <name> <command>",
 		Run: func(cmd *cobra.Command, args []string) {
 			isCheckpoint = true
 			// run the start command with the container img and name
@@ -242,6 +241,33 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 	}
 	// register checkpoint make command
 	manager.RegisterSubCmd(checkpointCmd, checkpointRestartCmd)
+
+	// create command: singularity checkpoint job_restart
+	// both starts an instance and restarts the checkpoint in the current directory
+	var checkpointJobRestartCmd = &cobra.Command{
+		DisableFlagsInUseLine: true,
+		Args:                  cobra.MinimumNArgs(2),
+		Use:                   "job_restart [args ...]",
+		Short:                 "Start an instance and restart from checkpoint",
+		Long:                  "Create an instance with DMTCP ready, then restart a program with the DMTCP wrappers",
+		Example:               "singularity checkpoint job_restart <image> <name>",
+		Run: func(cmd *cobra.Command, args []string) {
+			isCheckpoint = true
+			// run the start command with the container img and name
+			checkpointStartCmd.Run(checkpointStartCmd, args[0:2])
+			newArgs := []string{args[0],"sh", "/.dmtcp/scripts/restart.sh"}
+			fmt.Println(newArgs)
+			execCmdRun(execCmd, newArgs)
+			// stop instance
+			checkpointStopCmd.Run(checkpointStopCmd, args[1:2])
+		},
+		TraverseChildren: true,
+	}
+	// register checkpoint job_restart command
+	manager.RegisterSubCmd(checkpointCmd, checkpointJobRestartCmd)
+	// must register instance start and exec's, hopefully not overlap/destroying
+	checkpointJobRestartCmd.Flags().AddFlagSet(instanceStartCmd.Flags())
+	checkpointJobRestartCmd.Flags().AddFlagSet(execCmd.Flags())
 
 	// Ask for the checkpoint, wait for finish.
 	// TODO: Add script for checkpointing first, then run here.
