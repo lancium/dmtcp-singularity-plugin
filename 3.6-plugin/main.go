@@ -290,7 +290,8 @@ func callbackDMTCP(common *config.Common) {
 	}
 	//Add bind for DMTCP if in environment.
 	if isCheckpoint{
-		dmtcpLocation := os.Getenv("SINGULARITY_DMTCP")
+		dmtcpLocation := "/opt/dmtcp-singularity/"
+		dmtcpLibLocation := "/usr/lib/dmtcp"
 		if(dmtcpLocation == ""){
 			sylog.Errorf("No DMTCP location found. Run install script?")
 			return 
@@ -302,8 +303,23 @@ func callbackDMTCP(common *config.Common) {
 		dmtcpBind.Source = dmtcpLocation
 		dmtcpBind.Destination = "/.dmtcp/"
 
+		var dmtcpLibBind singularity.BindPath
+		dmtcpLibBind.Source = dmtcpLibLocation
+		dmtcpLibBind.Destination = "/.singularity.d/libs/"
+
+		//Create a directory for checkpoints
+		ckptDir := "./.checkpoint"
+		_, err := os.Stat(ckptDir)
+		if os.IsNotExist(err){
+			mkCkptDir := os.MkdirAll(ckptDir, os.ModePerm)
+			if mkCkptDir != nil {
+				sylog.Errorf("Could not create checkpoint directory. Will use current.")
+				ckptDir = "./"
+			}
+		}
+
 		var ckptBind singularity.BindPath
-		ckptBind.Source = "./"
+		ckptBind.Source = ckptDir
 		ckptBind.Destination = "/.checkpoint/"
 		
 		//Option for read only
@@ -311,15 +327,18 @@ func callbackDMTCP(common *config.Common) {
 			"ro":        &singularity.BindOption{},
 		}
 
+
 		//Option for read/write
 		var ckptOptions = map[string]*singularity.BindOption{
 			"rw":        &singularity.BindOption{},
 		}
 		dmtcpBind.Options = dmtcpOptions
+		dmtcpLibBind.Options = dmtcpOptions
 		ckptBind.Options = ckptOptions
 		
+		
 		//Set to include this new bind path
-		c.SetBindPath(append(origBind, dmtcpBind, ckptBind))
+		c.SetBindPath(append(origBind, dmtcpBind, dmtcpLibBind, ckptBind))
 	}
 	return
 }
