@@ -1,4 +1,5 @@
 #!/bin/sh
+# 
 pid=$( ps -C "dmtcp_coordinator" -o pid= | awk ' { print $1 } '  )
 /.dmtcp/dmtcp/bin/dmtcp_command -c
 while [ "$( /.dmtcp/dmtcp/bin/dmtcp_command -s | grep RUNNING |  awk ' { print $1 } ' )" = "RUNNING=no" ];
